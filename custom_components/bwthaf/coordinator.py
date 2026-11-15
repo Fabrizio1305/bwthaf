@@ -196,13 +196,14 @@ class BWTDataUpdateCoordinator(DataUpdateCoordinator):
             BWT_LOGIN_URL,
             data={"_username": username, "_password": password},
             headers={"Content-Type": "application/x-www-form-urlencoded"},
+            timeout=40,
         )
         if response.status_code != 200:
             raise UpdateFailed("Authentication failed")
 
         _LOGGER.info("Authentication successful")
 
-        dashboard = self.session.get(BWT_DASHBOARD_URL)
+        dashboard = self.session.get(BWT_DASHBOARD_URL, timeout=40)
         page = dashboard.text
         if serial_number not in page:
             raise UpdateFailed("Configured serial number not found in dashboard")
@@ -234,7 +235,7 @@ class BWTDataUpdateCoordinator(DataUpdateCoordinator):
     def _get_main_data(self):
         """Get main device data."""
         url = f"{BWT_SUMMARY_URL}/{self.receipt_line_key}"
-        response = self.session.get(url)
+        response = self.session.get(url, timeout=40)
         if response.status_code != 200:
             raise UpdateFailed("Failed to fetch main data")
 

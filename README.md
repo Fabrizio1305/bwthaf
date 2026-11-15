@@ -1,190 +1,42 @@
-# BWTHAF - BWT Home Assistant Fetcher
+# BWTHAF — BWT Home Assistant Fetcher
 
-Custom component Home Assistant pour récupérer et exposer les métriques des adoucisseurs BWT.
-Attention, testé uniquement avec My Perla Optimum
+Extension Home Assistant qui lit les données d'un adoucisseur BWT sur le portail
+**BWT Mon Service** (bwt-monservice.com) : consommation d'eau, sel, pression, alarmes.
 
-## Description
+Copie de [Maypeur/bwthaf](https://github.com/Maypeur/bwthaf), remise en forme pour s'installer
+depuis le Marketplace de Home Assistant et suivie pour un **My Perla Optimum**. Elle reprend le
+correctif de dwojciec de novembre 2026 (consommation et écran d'options).
 
-BWTHAF (BWT Home Assistant Fetcher) est une intégration personnalisée qui se connecte au service BWT Mon Service pour récupérer les données de votre adoucisseur d'eau BWT et les expose dans Home Assistant (capteurs natifs, statistiques quotidiennes, et MQTT optionnel si un broker est configuré).
+## Ce qu'il faut
+
+- un compte BWT Mon Service dans lequel l'adoucisseur apparaît ;
+- le numéro de série de l'adoucisseur.
 
 ## Installation
 
-1. Ajoutez ce repository à vos add-ons Home Assistant
-2. Installez l'add-on "BWTHAF - BWT Home Assistant Fetcher"
-3. Configurez l'add-on avec vos identifiants BWT
-4. Démarrez l'add-on
+1. Marketplace → dépôts personnalisés → `https://github.com/Fabrizio1305/bwthaf`.
+2. Installer l'extension, puis redémarrer Home Assistant.
+3. Paramètres → Appareils et services → Ajouter une intégration → « BWT Home Assistant
+   Fetcher » : identifiant, mot de passe, numéro de série.
 
-## Configuration
+## Données
 
-### Options obligatoires
+- Consommation d'eau du jour et historique jour par jour (importé dans les statistiques).
+- Sel par régénération, sel consommé, nombre de régénérations, alarme de sel.
+- Pression du réseau, dureté en entrée et en sortie, volume de résine.
+- État en ligne, mode vacances, coupure de courant, signal WiFi.
 
-- **username** : Votre identifiant BWT Mon Service
-- **password** : Votre mot de passe BWT Mon Service
-- **serial_number** : Le numéro de série de votre adoucisseur (ex: SERIALNO)
+Le détail des entités est dans [METRICS.md](METRICS.md), des exemples d'automatismes dans
+[AUTOMATIONS.md](AUTOMATIONS.md).
 
-### Options facultatives
+## Limites
 
-- **interval_main** : Intervalle de mise à jour des paramètres généraux en secondes (défaut: 3600 = 1 heure, min: 60, max: 86400)
-- **interval_consumption** : Intervalle de mise à jour des consommations en secondes (défaut: 300 = 5 minutes, min: 30, max: 3600)
-Les mises à jour ne semblent pas être plus rapides que 5 minutes sur le serveur.
-
-### Exemple de configuration
-
-```yaml
-username: "votre.email@example.com"
-password: "VotreMotDePasse"
-serial_number: "SERIALNO"
-interval_main: 3600
-interval_consumption: 300
-```
-
-## Métriques exposées
-
-L'add-on expose les métriques suivantes dans Home Assistant :
-
-### Métriques principales (mise à jour selon `interval_main`)
-
-#### Sensors
-
-| Nom | Entité | Description | Unité |
-|-----|--------|-------------|-------|
-| En Ligne | `binary_sensor.bwt_XXXXX_online` | État de connexion de l'appareil | - |
-| Mode Vacances | `binary_sensor.bwt_XXXXX_standby` | Mode vacances activé/désactivé | - |
-| Sel par Régénération | `sensor.bwt_XXXXX_salt` | Quantité de sel utilisée par régénération | g |
-| Volume Résine | `sensor.bwt_XXXXX_resin_vol` | Volume de la résine | L |
-| Dureté Entrée | `sensor.bwt_XXXXX_in_hardness` | Dureté de l'eau en entrée | °f |
-| Dureté Sortie | `sensor.bwt_XXXXX_out_hardness` | Dureté de l'eau en sortie | °f |
-| Pression Réseau | `sensor.bwt_XXXXX_pressure` | Pression du réseau d'eau | bar |
-| Signal WiFi | `sensor.bwt_XXXXX_wifi_signal` | Force du signal WiFi | dBm |
-| Volume Eau Adoucie | `sensor.bwt_XXXXX_vol_ok` | Volume d'eau adoucie depuis la dernière régénération | L |
-
-### Métriques de consommation (mise à jour selon `interval_consumption`)
-
-#### Sensors
-
-| Nom | Entité | Description | Unité |
-|-----|--------|-------------|-------|
-| Alarme Sel | `binary_sensor.bwt_XXXXX_salt_alarm` | Alarme de niveau de sel bas | - |
-| Coupure de Courant | `binary_sensor.bwt_XXXXX_power_outage` | Coupure de courant détectée | - |
-| Consommation d'Eau Journalière | `sensor.bwt_XXXXX_water_consumption` | Consommation d'eau du jour | L |
-| Incrément Eau | `sensor.bwt_XXXXX_water_increment` | Eau consommée depuis la dernière mesure | L |
-| Nombre de Régénérations | `sensor.bwt_XXXXX_regen_count` | Nombre de régénérations effectuées | - |
-| Consommation de Sel | `sensor.bwt_XXXXX_salt_consumption` | Quantité totale de sel consommée (historique BWT) | g (affichage kg si ≥ 1000 g) |
-| Date Dernière Mise à Jour | `sensor.bwt_XXXXX_last_update` | Horodatage de la dernière mise à jour | - |
-
-*Note : XXXXX représente votre numéro de série*
-
-## Utilisation des métriques
-
-### Compteurs d'eau
-
-Le sensor `sensor.bwt_XXXXX_water_consumption` représente la consommation d'eau du jour en cours. Il se remet à zéro automatiquement chaque jour.
-
-Le sensor `sensor.bwt_XXXXX_water_increment` indique la quantité d'eau consommée depuis la dernière mesure, permettant à Home Assistant de calculer précisément la consommation.
-
-### Consommation de sel
-
-La consommation de sel est calculée sur tout l'historique quotidien BWT :
-```
-sel du jour = régénérations du jour × sel par régénération
-sel cumulé  = somme des sels journaliers
-```
-
-Au-delà de 1000 g / 1000 L, Home Assistant peut afficher kg / m³. Les graphiques jour par jour utilisent les statistiques `bwthaf:water_<serial>` et `bwthaf:salt_<serial>`.
-
-Si l'intégration MQTT de Home Assistant est active, l'état et l'historique sont aussi publiés (retain) sur `bwt/<serial>` et `bwt/<serial>/history`. Aucun identifiant n'est écrit dans ces messages au-delà du numéro de série déjà configuré dans HA.
-
-### Alarmes
-
-Les binary sensors `salt_alarm` et `power_outage` peuvent être utilisés pour créer des automatisations et des notifications :
-
-**Exemple d'automatisation pour l'alarme sel :**
-
-```yaml
-automation:
-  - alias: "Alerte Sel Adoucisseur"
-    trigger:
-      - platform: state
-        entity_id: binary_sensor.bwt_serialno_salt_alarm
-        to: "on"
-    action:
-      - service: notify.mobile_app
-        data:
-          title: "Adoucisseur BWT"
-          message: "⚠️ Niveau de sel bas ! Veuillez recharger l'adoucisseur."
-```
-
-**Exemple pour les coupures de courant :**
-
-```yaml
-automation:
-  - alias: "Alerte Coupure Courant Adoucisseur"
-    trigger:
-      - platform: state
-        entity_id: binary_sensor.bwt_serialno_power_outage
-        to: "on"
-    action:
-      - service: notify.mobile_app
-        data:
-          title: "Adoucisseur BWT"
-          message: "⚡ Coupure de courant détectée sur l'adoucisseur"
-```
-
-## Dashboard Lovelace
-
-Exemple de carte pour afficher les informations de l'adoucisseur :
-
-```yaml
-type: entities
-title: Adoucisseur BWT
-entities:
-  - entity: binary_sensor.bwt_serialno_online
-    name: État
-  - entity: sensor.bwt_serialno_water_consumption
-    name: Eau consommée aujourd'hui
-  - entity: sensor.bwt_serialno_regen_count
-    name: Régénérations
-  - entity: sensor.bwt_serialno_salt_consumption
-    name: Sel consommé
-  - entity: binary_sensor.bwt_serialno_salt_alarm
-    name: Alarme sel
-  - entity: sensor.bwt_serialno_wifi_signal
-    name: Signal WiFi
-  - entity: sensor.bwt_serialno_in_hardness
-    name: Dureté entrée
-  - entity: sensor.bwt_serialno_out_hardness
-    name: Dureté sortie
-```
-
-## Gestion des erreurs
-
-### Erreurs d'authentification
-
-Si les identifiants sont incorrects, l'add-on retente automatiquement toutes les 5 minutes.
-
-Si vous modifiez vos identifiants dans la configuration, l'add-on détecte le changement et retente immédiatement l'authentification.
-
-### Erreurs de connexion
-
-En cas de problème réseau ou d'indisponibilité du service BWT, l'add-on retente automatiquement toutes les minutes.
-
-## Logs
-
-Les logs de l'add-on sont accessibles via l'interface Home Assistant. Ils incluent :
-
-- Les tentatives de connexion
-- Les mises à jour réussies
-- Les erreurs éventuelles
-- Les changements de configuration détectés
-
-## Support
-
-Pour signaler un problème ou demander une fonctionnalité, créez une issue sur le repository GitHub.
+- Extension non officielle. Elle lit les pages du portail : elle cesse de fonctionner quand BWT
+  les modifie, jusqu'à correction.
+- Essayée uniquement avec un My Perla Optimum.
+- Le mot de passe est conservé par Home Assistant et n'est envoyé qu'à bwt-monservice.com.
+- Le portail ne rafraîchit pas ses données plus souvent que toutes les cinq minutes environ.
 
 ## Licence
 
-MIT License
-
-## Auteur
-
-BWTHAF - BWT Home Assistant Fetcher - Maypeur
+MIT. Auteur d'origine : Maypeur.

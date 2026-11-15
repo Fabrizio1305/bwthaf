@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0] - 2026-11-15
+
+### Modifié
+- Fichiers rangés dans `custom_components/bwthaf/` et ajout de `hacs.json` : l'extension s'installe comme dépôt personnalisé.
+- Délai d'attente de 40 secondes sur toutes les requêtes vers le portail.
+- Mot de passe masqué à la saisie.
+
 ## [1.1.0] - 2026-11-04
 
 ### Corrigé
